@@ -1,18 +1,14 @@
-#include <Arduino.h>
+#include "./communication/communication.h"
 
-// put function declarations here:
-int myFunction(int, int);
+ExternalCommunication comms;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    Serial.begin(9600);
+    while (!Serial);          // Wait until Serial is ready
+    comms.setupCommunication();
+    Serial.println("External system is ready to receive messages.");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    comms.receiveMessage();  // Receive a message and print if received
 }
