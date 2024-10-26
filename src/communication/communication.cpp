@@ -3,15 +3,11 @@
 #define ss 5
 #define rst 14
 #define dio0 2
-#define LED_BUILTIN 2 // Define the built-in LED pin on the ESP32 (built-in indicator LED)
 
 ExternalCommunication::ExternalCommunication() {}
 
 void ExternalCommunication::setupCommunication() {
-    
-    pinMode(LED_BUILTIN, OUTPUT);  // Set the built-in LED pin as output
-    
-
+        
     LoRa.setPins(ss, rst, dio0);
     if (!LoRa.begin(433E6)) {
         Serial.println("LoRa failed to start!");
@@ -31,10 +27,20 @@ void ExternalCommunication::receiveMessage() {
 
         Serial.println("Message received: " + message);
         
-        // Turn on the built-in LED for one second   
-        digitalWrite(LED_BUILTIN, HIGH);   // Turn on the built-in LED
-        delay(3000);  // Wait for 3 seconds
-        digitalWrite(LED_BUILTIN, LOW);    // Turn off the built-in LED
-
+        delay(1000);  // Wait for 3 seconds
+        sendResponse("ACK");
     }
+
+    
+}
+
+void ExternalCommunication::sendResponse(String response) {
+    Serial.print("Sending message: ");
+    Serial.println(response);
+
+    LoRa.beginPacket();       
+    LoRa.print(response);     
+    LoRa.endPacket();         
+    delay(1000);              
+
 }

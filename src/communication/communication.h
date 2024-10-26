@@ -3,6 +3,7 @@
 
 #include <SPI.h>      // Library for SPI communication required for the LoRa module
 #include <LoRa.h>     // LoRa library enabling communication with the LoRa module
+#include <Arduino.h>
 
 class ExternalCommunication {
 public:
