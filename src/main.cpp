@@ -1,14 +1,28 @@
 #include "./communication/communication.h"
+#include "./DisplayMenu/DisplayMenu.h"
 
-ExternalCommunication comms;
+
+ExternalCommunication externalComm;
+DisplayMenu menu;
 
 void setup() {
     Serial.begin(9600);
-    while (!Serial);          // Wait until Serial is ready
-    comms.setupCommunication();
-    Serial.println("External system is ready to receive messages.");
+    while (!Serial && millis() < 5000);
+    
+    if (!externalComm.setupCommunication()) {
+        Serial.println(F("Failed to initialize communication!"));
+        while (1) {
+            delay(1000);
+        }
+    }
+    
+    Serial.println(F("External system ready."));
+    menu.setupScreen();
+
 }
 
 void loop() {
-    comms.receiveMessage();  // Receive a message and print if received
+    externalComm.receiveMessage(menu);
+    // Add a small delay to prevent tight looping
+    delay(10);
 }
