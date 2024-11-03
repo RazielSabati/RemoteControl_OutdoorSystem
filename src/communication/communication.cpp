@@ -28,51 +28,55 @@ bool ExternalCommunication::setupCommunication() {
 }
 
 void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
-
     int packetSize = LoRa.parsePacket();
 
-    if (packetSize == 0) 
-            return;
-
-    String receivedMessage = "";
-    while (LoRa.available()) {
-        char c = LoRa.read();  // קריאה של תו בודד
-        receivedMessage += c;   // הוספת התו ל-String
+        // Check if we received exactly one byte (8 bits)
+    if (packetSize != 1) {
+        // Serial.println(F("Invalid packet size received."));
+        return;  // Exit the function if packet size is not exactly 1 byte
     }
 
-    if(receivedMessage.length() > 3){
-        menu.displayReceivedMessage("Invalid packet size received");
-        return;
+    uint8_t receivedByte = LoRa.read();  // Read the single byte message
+
+    Serial.print(F("Received byte: 0b"));
+    for (int i = 7; i >= 0; i--) {
+        Serial.print((receivedByte >> i) & 0x01);
     }
+    Serial.println();
 
-    int receivedNumber = receivedMessage.toInt();  // המרה למספר שלם
+    // Extract menu type, action index, and checksum
+    int menuType = (receivedByte >> 7) & 0x01;      // Extract the first bit (menuType)
+    int actionIndex = (receivedByte >> 4) & 0x07;   // Extract the next 3 bits (actionIndex)
+    int receivedChecksum = receivedByte & 0x0F;     // Extract the last 4 bits for checksum
 
-    Serial.print(F("Received number: "));
-    Serial.println(receivedNumber);
-
-    menu.displayReceivedMessage(String(receivedNumber) + " rssi:" + String(LoRa.packetRssi()) + " snr:" + String(LoRa.packetSnr()));
-
-    // Extract menu type and action index
-    int menuType = receivedNumber / 10 - 1;
-    int actionIndex = receivedNumber % 10;
-    
+    // Validate menuType and actionIndex range
     if (menuType < 0 || menuType > 1 || actionIndex < 0 || actionIndex > 5) {
         Serial.println(F("Invalid command code received."));
         return;
     }
-    
+
+    // Calculate checksum
+    int calculatedChecksum = ((menuType << 3) | actionIndex) ^ ERROR_CHECK_MASK; // Match the encoding in sendMessage
+    calculatedChecksum &= 0x0F;  // Keep only the least significant 4 bits
+
+    // Check if calculated checksum matches the received checksum
+    if (calculatedChecksum != receivedChecksum) {
+        Serial.println(F("Checksum does not match."));
+        return;
+    }
+
     // Execute action
     actionHandler.executeAction(menuType, actionIndex);
-    if (!sendResponseWithRetry(receivedNumber, 5, menu)) 
+    if (!sendResponseWithRetry(receivedByte, 5, menu)) 
         Serial.println(F("Failed to send acknowledgment after retries"));
-            
 }
 
-bool ExternalCommunication::sendResponse(int response,DisplayMenu& menu) {
+
+bool ExternalCommunication::sendResponse(uint8_t response,DisplayMenu& menu) {
     String sendMessage = String(response);  // הפיכת המספר ל-String
 
     LoRa.beginPacket();
-    LoRa.print(sendMessage);  // שליחה של ההודעה כמחרוזת
+    LoRa.write(response);
     bool success = LoRa.endPacket();
     
     if (success) {
@@ -85,7 +89,7 @@ bool ExternalCommunication::sendResponse(int response,DisplayMenu& menu) {
     return success;
 }
 
-bool ExternalCommunication::sendResponseWithRetry(int response, int maxRetries,DisplayMenu& menu) {
+bool ExternalCommunication::sendResponseWithRetry(uint8_t response, int maxRetries,DisplayMenu& menu) {
     int ERROR = 0;
 
     for (int i = 0; i < maxRetries; i++) {
