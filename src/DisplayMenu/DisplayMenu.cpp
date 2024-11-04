@@ -34,27 +34,34 @@ void DisplayMenu::clearMessageTask(void* parameter) {
 }
 
 void DisplayMenu::displayReceivedMessage(String confirmationMessage) {
-    // Display the message
-    display.fillRect(0, 0, SCREEN_WIDTH, 16, BLACK);
-    display.setCursor(0,0);
+    // Clear entire display for full-screen message
+    display.clearDisplay();
+    display.setCursor(0, 0);
     display.setTextSize(1);
     display.setTextColor(WHITE);
-    display.print(confirmationMessage);
-    display.display();
     
-    // If there is a previous task still running, delete it
-    if (clearMessageTaskHandle != NULL) {
-        vTaskDelete(clearMessageTaskHandle);
+    int lineHeight = 8;  // Height of each line in pixels
+    int currentLine = 0; // Track the current line
+
+    for (int i = 0; i < confirmationMessage.length(); i++) {
+        char c = confirmationMessage.charAt(i);
+        
+        display.print(c);
+
+        // Check if current position is past screen width
+        if (display.getCursorX() >= SCREEN_WIDTH) {
+            // Move to next line if we hit the edge of the screen
+            currentLine++;
+            display.setCursor(0, currentLine * lineHeight);
+
+            // Stop displaying if we reach the bottom of the screen
+            if ((currentLine + 1) * lineHeight >= SCREEN_HEIGHT) {
+                break;
+            }
+        }
     }
-    
-    // Create a new task on core 0
-    xTaskCreatePinnedToCore(
-        clearMessageTask,        // Task function
-        "ClearMessage",          // Task name
-        2048,                    // Stack size
-        this,                    // Parameter to pass (this pointer)
-        1,                       // Priority
-        &clearMessageTaskHandle, // Task handle
-        0                        // Core 0
-    );
+
+    display.display();
 }
+
+

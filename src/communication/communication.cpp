@@ -5,7 +5,6 @@ ExternalCommunication::ExternalCommunication() : actionHandler() {}
 bool ExternalCommunication::setupCommunication() {
     LoRa.setPins(LORA_SS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
     
-    // Try to initialize LoRa with timeout
     unsigned long start = millis();
     while (!LoRa.begin(433E6)) {
         if (millis() - start > 5000) {
@@ -15,11 +14,10 @@ bool ExternalCommunication::setupCommunication() {
         delay(100);
     }
     
-    // הגדרות למרחק מקסימלי
-    LoRa.setSpreadingFactor(12); //שידור איטי יותר, אך החוסן והטווח גדלים
-    LoRa.setSignalBandwidth(31.25E3); // רוחב פס מאוזן יותר
+    LoRa.setSpreadingFactor(12);
+    LoRa.setSignalBandwidth(31.25E3);
     LoRa.setCodingRate4(8);
-    LoRa.setPreambleLength(8);        // אורך preamble סטנדרטי
+    LoRa.setPreambleLength(8);
     LoRa.setTxPower(20);
     LoRa.enableCrc();
     
@@ -27,16 +25,48 @@ bool ExternalCommunication::setupCommunication() {
     return true;
 }
 
+void sendResponseTask(void* parameters) {
+    uint8_t* messageParams = (uint8_t*)parameters;
+    uint8_t response = *messageParams;
+    
+    unsigned long startTime = millis();
+    int successCount = 0;
+    
+    // Try sending twice with 15 seconds timeout
+    for(int i = 0; i < 2 && (millis() - startTime) < 15000; i++) {
+        String sendMessage = String(response);
+        
+        LoRa.beginPacket();
+        LoRa.write(response);
+        bool success = LoRa.endPacket();
+        
+        if(success) {
+            successCount++;
+            Serial.print(F("Message sent successfully attempt "));
+            Serial.println(i + 1);
+        } else {
+            Serial.println(F("Failed to send message"));
+        }
+        
+        delay(20); // Short delay between attempts
+    }
+    
+    if(successCount == 0) {
+        Serial.println(F("Failed to send any messages within timeout"));
+    }
+    
+    delete messageParams; // Clean up
+    vTaskDelete(NULL);    // Delete task
+}
+
 void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     int packetSize = LoRa.parsePacket();
 
-        // Check if we received exactly one byte (8 bits)
     if (packetSize != 1) {
-        // Serial.println(F("Invalid packet size received."));
-        return;  // Exit the function if packet size is not exactly 1 byte
+        return;
     }
 
-    uint8_t receivedByte = LoRa.read();  // Read the single byte message
+    uint8_t receivedByte = LoRa.read();
 
     Serial.print(F("Received byte: 0b"));
     for (int i = 7; i >= 0; i--) {
@@ -44,71 +74,47 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     }
     Serial.println();
 
-    // Extract menu type, action index, and checksum
-    int menuType = (receivedByte >> 7) & 0x01;      // Extract the first bit (menuType)
-    int actionIndex = (receivedByte >> 4) & 0x07;   // Extract the next 3 bits (actionIndex)
-    int receivedChecksum = receivedByte & 0x0F;     // Extract the last 4 bits for checksum
+    int menuType = (receivedByte >> 7) & 0x01;
+    int actionIndex = (receivedByte >> 4) & 0x07;
+    int receivedChecksum = receivedByte & 0x0F;
 
-    // Validate menuType and actionIndex range
     if (menuType < 0 || menuType > 1 || actionIndex < 0 || actionIndex > 5) {
         Serial.println(F("Invalid command code received."));
         return;
     }
 
-    // Calculate checksum
-    int calculatedChecksum = ((menuType << 3) | actionIndex) ^ ERROR_CHECK_MASK; // Match the encoding in sendMessage
-    calculatedChecksum &= 0x0F;  // Keep only the least significant 4 bits
+    int calculatedChecksum = ((menuType << 3) | actionIndex) ^ ERROR_CHECK_MASK;
+    calculatedChecksum &= 0x0F;
 
-    // Check if calculated checksum matches the received checksum
     if (calculatedChecksum != receivedChecksum) {
         Serial.println(F("Checksum does not match."));
         return;
     }
 
-    // Execute action
+    menu.displayReceivedMessage(  menu.getData(menuType, actionIndex)  );
     actionHandler.executeAction(menuType, actionIndex);
-    if (!sendResponseWithRetry(receivedByte, 5, menu)) 
-        Serial.println(F("Failed to send acknowledgment after retries"));
-}
 
-
-bool ExternalCommunication::sendResponse(uint8_t response,DisplayMenu& menu) {
-    String sendMessage = String(response);  // הפיכת המספר ל-String
-
-    LoRa.beginPacket();
-    LoRa.write(response);
-    bool success = LoRa.endPacket();
     
-    if (success) {
-        menu.displayReceivedMessage(sendMessage + ":Message sent successfully");
+    // Create dynamic byte for task parameters
+    uint8_t* messageParams = new uint8_t(receivedByte);
+    
+    // Create task on core 0
+    TaskHandle_t sendingTaskHandle = NULL;
+    BaseType_t result = xTaskCreatePinnedToCore(
+        sendResponseTask,      // Task function
+        "SendResponse",        // Task name
+        2048,                  // Stack size
+        messageParams,         // Parameters (byte to send)
+        1,                     // Priority
+        &sendingTaskHandle,    // Task handle
+        0                      // Core ID (0)
+    );
+    
+    if(result != pdPASS) {
+        Serial.println(F("Failed to create sending task"));
+        menu.displayReceivedMessage("Failed to start sending task");
+        delete messageParams;
     } else {
-        menu.displayReceivedMessage("Failed to send message");
+        menu.displayReceivedMessage("Started sending response");
     }
-
-    delay(10);
-    return success;
 }
-
-bool ExternalCommunication::sendResponseWithRetry(uint8_t response, int maxRetries,DisplayMenu& menu) {
-    int ERROR = 0;
-
-    for (int i = 0; i < maxRetries; i++) {
-        if (sendResponse(response,menu)) {
-        Serial.print(F("Retry "));
-        Serial.print(i + 1);
-        Serial.println(F(" of "));
-        Serial.println(maxRetries);
-        delay(20); // Increasing delay between retries
-        }
-        else 
-        {
-        ERROR++;
-        Serial.print(F("cannot send response"));
-        }
-    }
-    if (ERROR == maxRetries) {
-        return false;
-    }
-    return true;
-}
-
