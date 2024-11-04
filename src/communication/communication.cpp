@@ -1,7 +1,9 @@
 #include "communication.h"
 
+// Constructor of the ExternalCommunication class
 ExternalCommunication::ExternalCommunication() : actionHandler() {}
 
+// Function to set up LoRa communication
 bool ExternalCommunication::setupCommunication() {
     LoRa.setPins(LORA_SS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
     
@@ -14,20 +16,22 @@ bool ExternalCommunication::setupCommunication() {
         delay(100);
     }
     
-    LoRa.setSpreadingFactor(12);
-    LoRa.setSignalBandwidth(31.25E3);
-    LoRa.setCodingRate4(8);
+    LoRa.setSpreadingFactor(12); 
+    LoRa.setSignalBandwidth(62.5E3);
+    LoRa.setCodingRate4(5);
     LoRa.setPreambleLength(8);
     LoRa.setTxPower(20);
-    LoRa.enableCrc();
+    // LoRa.enableCrc();
     
     Serial.println(F("LoRa initialized successfully."));
     return true;
 }
 
+// Task function to send a response, runs on a different core
 void sendResponseTask(void* parameters) {
-    uint8_t* messageParams = (uint8_t*)parameters;
-    uint8_t response = *messageParams;
+    TaskParams* taskParams = (TaskParams*)parameters;
+    uint8_t response = taskParams->message;
+    DisplayMenu* menu = taskParams->menu;
     
     unsigned long startTime = millis();
     int successCount = 0;
@@ -48,17 +52,20 @@ void sendResponseTask(void* parameters) {
             Serial.println(F("Failed to send message"));
         }
         
-        delay(20); // Short delay between attempts
+        delay(40); // Short delay between attempts
     }
     
     if(successCount == 0) {
         Serial.println(F("Failed to send any messages within timeout"));
+    } else {
+        menu->displayTopScreen("Finish sending response");
     }
     
-    delete messageParams; // Clean up
-    vTaskDelete(NULL);    // Delete task
+    delete taskParams; // Clean up
+    vTaskDelete(NULL); // Delete task
 }
 
+// Function to receive a message and update the display menu
 void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     int packetSize = LoRa.parsePacket();
 
@@ -80,6 +87,7 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
 
     if (menuType < 0 || menuType > 1 || actionIndex < 0 || actionIndex > 5) {
         Serial.println(F("Invalid command code received."));
+        menu.displayTopScreen("Invalid command code");
         return;
     }
 
@@ -88,33 +96,44 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
 
     if (calculatedChecksum != receivedChecksum) {
         Serial.println(F("Checksum does not match."));
+        menu.displayTopScreen("Checksum error");
         return;
     }
 
-    menu.displayReceivedMessage(  menu.getData(menuType, actionIndex)  );
-    actionHandler.executeAction(menuType, actionIndex);
+    String actionMessage = "Executing action...                       ";
 
-    
-    // Create dynamic byte for task parameters
-    uint8_t* messageParams = new uint8_t(receivedByte);
-    
+    menu.updateMiddleScreen(actionMessage + String(menu.getData(menuType, actionIndex)));
+
+    if (actionHandler.executeAction(menuType, actionIndex)) {
+        actionMessage = String(menu.getData(menuType, actionIndex)) + " done!";
+    } else {
+        actionMessage = "Failed to execute action!";
+    }
+
+    menu.updateBottomScreen(actionMessage);
+
+    // Create dynamic struct for task parameters
+    TaskParams* taskParams = new TaskParams;
+    taskParams->message = receivedByte; // Use receivedByte directly
+    taskParams->menu = &menu; // Pass the address of the menu
+
     // Create task on core 0
     TaskHandle_t sendingTaskHandle = NULL;
     BaseType_t result = xTaskCreatePinnedToCore(
         sendResponseTask,      // Task function
         "SendResponse",        // Task name
         2048,                  // Stack size
-        messageParams,         // Parameters (byte to send)
+        taskParams,            // Parameters (byte to send)
         1,                     // Priority
         &sendingTaskHandle,    // Task handle
         0                      // Core ID (0)
     );
     
-    if(result != pdPASS) {
+    if (result != pdPASS) {
         Serial.println(F("Failed to create sending task"));
-        menu.displayReceivedMessage("Failed to start sending task");
-        delete messageParams;
+        menu.displayTopScreen("Failed to start sending task");
+        delete taskParams;
     } else {
-        menu.displayReceivedMessage("Started sending response");
+        menu.displayTopScreen("Started sending response");
     }
 }

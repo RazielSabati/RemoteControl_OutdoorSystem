@@ -28,12 +28,11 @@ class DisplayMenu {
 
   public:
     DisplayMenu(); // Constructor
-    void setupScreen();
-    static void clearMessageTask(void* parameter);  // Static function to clear message
-
-    void displayReceivedMessage(String Message);     // Function to display confirmation message
-
-    const char* getData(int externalIndex, int internalIndex);
+    void setupScreen(); // Function to set up the screen
+    void displayTopScreen(String Message); // Function to display a message at the top of the screen
+    void updateBottomScreen(String Message); // Function to display a message at the bottom of the screen
+    void updateMiddleScreen(String Message); // Function to display a message in the middle of the screen
+    const char* getData(int externalIndex, int internalIndex); // Function to get data from the menu matrix
 };
 
 #endif // DISPLAYMENU_H

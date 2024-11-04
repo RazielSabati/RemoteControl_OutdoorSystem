@@ -11,11 +11,13 @@ private:
     LightControl lightControl;
     HeatControl heatControl;
     SoundControl soundControl;
-    std::function<void()> actionsMatrix[2][6];
+    
+    // הגדרת מטריצת הפעולות עם פונקציות שמחזירות bool
+    std::function<bool()> actionsMatrix[2][6]; 
 
 public:
     ActionHandler();
-    void executeAction(int menuType, int actionIndex);
+    bool executeAction(int menuType, int actionIndex);
 };
 
 #endif
