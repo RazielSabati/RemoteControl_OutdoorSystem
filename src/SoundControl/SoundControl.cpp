@@ -18,7 +18,11 @@ bool SoundControl::turnOnVoice() {
         Serial.println("Failed to turn on sound.");
         return false;
     }
-    return playTrack(1); // Play the first track
+    if(playTrack(1)) {
+        Serial.println("Sound turned on.");
+        return true;
+    }
+    return false; // Play the first track
 }
 
 // Function to turn off the voice
@@ -47,7 +51,13 @@ bool SoundControl::playTrack(uint16_t trackNumber) {
     uint8_t command[8];
     memcpy(command, CMD_PLAY_TRACK, 8);
     command[6] = trackNumber;
-    return sendCommand(command, sizeof(command));
+    if(sendCommand(command, sizeof(command)))
+        {
+            Serial.print("Playing track ");
+            Serial.println(trackNumber);
+            return true;
+        }
+    return false; ;
 }
 
 // Set the volume level
@@ -62,5 +72,10 @@ bool SoundControl::setVolume(uint8_t volume) {
 // Send a command to the MP3 module
 bool SoundControl::sendCommand(uint8_t *command, size_t len) {
     size_t bytesWritten = MP3.write(command, len);
-    return (bytesWritten == len); // Return true if all bytes were written
+    if(bytesWritten != len) {
+        Serial.println("Failed to send command.");
+        return false; // Return false if not all bytes were written
+    }
+
+    return true; // Return true if all bytes were written
 }

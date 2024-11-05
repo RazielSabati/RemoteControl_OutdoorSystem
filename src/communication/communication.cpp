@@ -17,7 +17,7 @@ bool ExternalCommunication::setupCommunication() {
     }
     
     LoRa.setSpreadingFactor(12); 
-    LoRa.setSignalBandwidth(62.5E3);
+    LoRa.setSignalBandwidth(125000);
     LoRa.setCodingRate4(5);
     LoRa.setPreambleLength(8);
     LoRa.setTxPower(20);

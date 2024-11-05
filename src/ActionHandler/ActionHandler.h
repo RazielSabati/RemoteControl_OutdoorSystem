@@ -12,12 +12,18 @@ private:
     HeatControl heatControl;
     SoundControl soundControl;
     
-    // הגדרת מטריצת הפעולות עם פונקציות שמחזירות bool
+    // Define a matrix of actions with functions that return bool
     std::function<bool()> actionsMatrix[2][6]; 
 
 public:
     ActionHandler();
     bool executeAction(int menuType, int actionIndex);
+    bool executeTestScenario();
+    bool readBatteryPercentage();
+    bool turnOffSystem();
+    bool executeScenario1();
+    bool executeScenario2();
+
 };
 
 #endif

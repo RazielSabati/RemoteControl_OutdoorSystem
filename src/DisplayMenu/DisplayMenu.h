@@ -22,10 +22,7 @@ class DisplayMenu {
       { "turn on led", "turn off led", "turn on voice", "turn off voice", "turn on heat", "turn off heat" }
     };
 
-    Adafruit_SSD1306 display;
-
-    static TaskHandle_t clearMessageTaskHandle;
-
+    Adafruit_SSD1306 display; // OLED display object
   public:
     DisplayMenu(); // Constructor
     void setupScreen(); // Function to set up the screen
