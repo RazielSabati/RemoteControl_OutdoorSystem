@@ -16,12 +16,12 @@ bool ExternalCommunication::setupCommunication() {
         delay(100);
     }
     
-    LoRa.setSpreadingFactor(12); 
-    LoRa.setSignalBandwidth(125000);
-    LoRa.setCodingRate4(5);
-    LoRa.setPreambleLength(8);
+    // lora initialization
+    LoRa.setSignalBandwidth(62.5E3);
+    LoRa.setSpreadingFactor(12);
+    LoRa.setCodingRate4(8);
     LoRa.setTxPower(20);
-    // LoRa.enableCrc();
+
     
     Serial.println(F("LoRa initialized successfully."));
     return true;
