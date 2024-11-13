@@ -3,7 +3,7 @@
 
 // Constructor
 ActionHandler::ActionHandler() 
-    : lightControl(), heatControl(15), soundControl(16, Serial1) {  // Create instances with default values
+    : lightControl(), heatControl(26, 13), soundControl(16, Serial1) {  // Create instances with default values
     
     // Define the actions matrix with functions that return bool
     actionsMatrix[0][0] = [this]() { return executeTestScenario(); };
@@ -17,8 +17,8 @@ ActionHandler::ActionHandler()
     actionsMatrix[1][1] = [this]() { return lightControl.turnOffLED(); };
     actionsMatrix[1][2] = [this]() { return soundControl.turnOnVoice(); };
     actionsMatrix[1][3] = [this]() { return soundControl.turnOffVoice(); };
-    // actionsMatrix[1][4] = [this]() { return heatControl.turnOnHeat(); };
-    // actionsMatrix[1][5] = [this]() { return heatControl.turnOffHeat(); };
+    actionsMatrix[1][4] = [this]() { return heatControl.turnOnHeat(); };
+    actionsMatrix[1][5] = [this]() { return heatControl.turnOffHeat(); };
 }
 
 
