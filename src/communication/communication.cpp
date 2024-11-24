@@ -32,65 +32,60 @@ bool ExternalCommunication::setupCommunication() {
     return true;
 }
 
-
-
 // Function to receive a message and update the display menu
 void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     int packetSize = LoRa.parsePacket();
 
-    if (packetSize != 32) { // ה-IV הוא 12 בתים וההודעה המוצפנת היא 16 בתים
+    if (packetSize != 32) { // The IV is 16 bytes and the encrypted message is 16 bytes
         return;
     }
 
-    // קריאת הנתונים מהחבילה
+    // Read the data from the packet
     LoRa.readBytes(buffer, 32);
 
-    // חילוץ ה-IV (12 בתים ראשונים)
+    // Extract the IV (first 16 bytes)
     memcpy(iv, buffer, 16);
 
-    // חילוץ ההודעה המוצפנת (16 בתים הבאים)
+    // Extract the encrypted message (next 16 bytes)
     memcpy(encrypted, buffer + 16, 16);
 
     aesLib.decrypt(encrypted, 16, decrypted, key, 128, iv);
 
-    // בדיקת ה-checksum
+    // Check the checksum
     uint8_t checksum = decrypted[15];
     if (checksum != (decrypted[0] ^ 0xF0)) {
         Serial.println(F("Checksum error."));
         return;
     }
 
-    // חילוץ ה-rolling code (4 בתים)
+    // Extract the rolling code (4 bytes)
     uint32_t rollingCodeReceived = 
         (decrypted[1] << 24) | 
         (decrypted[2] << 16) | 
         (decrypted[3] << 8) | 
         decrypted[4];
 
- 
-
-    if(rollingCodeReceived <= rollingCode  || rollingCodeReceived > rollingCode + 50) {
-        if(rollingCodeReceived == 0) {
+    if (rollingCodeReceived <= rollingCode || rollingCodeReceived > rollingCode + 50) {
+        if (rollingCodeReceived == 0) {
             rollingCodeReceived = 0;
-        } 
-        else {
+        } else {
             Serial.println(F("Received message with invalid rolling code."));
             return;
         }
     }
 
-    // חילוץ המידע מההודעה
-    int menuType = (decrypted[0] >> 7) & 0x01;   // ביט המשמעותי ביותר
-    int actionIndex = (decrypted[0] >> 4) & 0x07; // 3 ביטים הבאים
+    // Extract the information from the message
+    int menuType = (decrypted[0] >> 7) & 0x01;   // Most significant bit
+    int actionIndex = (decrypted[0] >> 4) & 0x07; // Next 3 bits
 
-    // אימות הנתונים
+    // Validate the data
     if (menuType < 0 || menuType > 1 || actionIndex < 0 || actionIndex > 7) {
         Serial.println(F("Invalid command code received."));
         menu.displayTopScreen("Invalid command code");
         return;
     }
 
-    // עדכון התצוגה
+    // Update the display
     String actionMessage = "Executing action... ";
     menu.updateMiddleScreen(actionMessage + String(menu.getData(menuType, actionIndex)));
 
@@ -102,15 +97,13 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
 
     menu.updateBottomScreen(actionMessage);
 
-
-    // עדכון ה-rolling code
+    // Update the rolling code
     rollingCode = rollingCodeReceived + 1;
-
 
     // Create a response message
 
     // Put the rolling code in the next 4 bytes
-    decrypted[1] =  (rollingCode >> 24) & 0xFF; 
+    decrypted[1] = (rollingCode >> 24) & 0xFF; 
     decrypted[2] = (rollingCode >> 16) & 0xFF;     
     decrypted[3] = (rollingCode >> 8) & 0xFF;     
     decrypted[4] = rollingCode & 0xFF;     
@@ -128,15 +121,13 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     if (success) {
         menu.displayTopScreen("Sending response done");
         Serial.print(F("Sent message: "));
-    }
-    else {
+    } else {
         menu.displayTopScreen("Failed to send response");
         Serial.println(F("Failed to send message"));
     }    
-
 }
 
-
+// Function to generate a random IV
 void ExternalCommunication::generateRandomIV() {
     for (int i = 0; i < 16; i++) {
         iv[i] = random(0, 256);

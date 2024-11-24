@@ -7,15 +7,6 @@
 #include "../DisplayMenu/DisplayMenu.h"
 #include <AESLib.h>
 
-// Task function that will run on the other core
-void sendResponseTask(void* parameters);
-
-// Structure to hold task parameters
-struct TaskParams {
-    uint16_t message;         
-    DisplayMenu* menu;        
-};
-
 // Class to handle external communication using LoRa
 class ExternalCommunication {
 private:
@@ -25,32 +16,29 @@ private:
 
     ActionHandler actionHandler;            // Object to handle actions
 
-        // מפתח ההצפנה (32 בתים = 256 ביט)
- // מפתח AES באורך 16 בתים (128 ביט)
+    // AES encryption key (16 bytes = 128 bits)
     byte key[16] = {0x2b, 0x7e, 0x15, 0x16, 0xae, 0x2a, 0xd4, 0xa6, 0x8a, 0xf7, 0x97, 0x75, 0x40, 0x8e, 0x6a, 0x12};
 
+    uint8_t buffer[32]; // Buffer to hold incoming data
 
+    uint32_t rollingCode; // Rolling code for encryption
 
-    uint8_t buffer[32];
+    byte iv[16]; // Initialization vector for encryption
+    byte iv_for_en[16]; // Initialization vector for encryption response
 
-    uint32_t rollingCode; // המידע להצפנה
-
-    byte iv[16]; // וקטור אתחול באורך 96 ביטים (12 בתים עבור ChaCha20)
-    byte iv_for_en[16]; 
-
-    uint8_t plaintext[16]; // ההודעה המקורית
-    uint8_t encrypted[16]; // ההודעה המוצפנת
-    uint8_t decrypted[16]; // ההודעה המפוענחת
+    uint8_t plaintext[16]; // Original message
+    uint8_t encrypted[16]; // Encrypted message
+    uint8_t decrypted[16]; // Decrypted message
     
-    AESLib aesLib;
+    AESLib aesLib; // AES library instance
 
-    int randomNumber;
+    int randomNumber; // Random number for encryption
 
 public:
-    ExternalCommunication();                
-    bool setupCommunication();              
-    void receiveMessage(DisplayMenu& menu); 
-    void generateRandomIV();
+    ExternalCommunication();                // Constructor
+    bool setupCommunication();              // Function to set up LoRa communication
+    void receiveMessage(DisplayMenu& menu); // Function to receive a message and update the display menu
+    void generateRandomIV();                // Function to generate a random initialization vector
 
 };
 
