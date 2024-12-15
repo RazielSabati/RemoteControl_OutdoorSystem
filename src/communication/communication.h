@@ -11,7 +11,7 @@
 class ExternalCommunication {
 private:
     static const uint8_t LORA_SS_PIN = 5;   // LoRa module SS pin
-    static const uint8_t LORA_RST_PIN = 14; // LoRa module reset pin
+    static const uint8_t LORA_RST_PIN = 21; // LoRa module reset pin
     static const uint8_t LORA_DIO0_PIN = 2; // LoRa module DIO0 pin
 
     ActionHandler actionHandler;            // Object to handle actions
