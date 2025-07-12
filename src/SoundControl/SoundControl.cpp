@@ -11,14 +11,14 @@ SoundControl::SoundControl(int pin, HardwareSerial& mp3Serial) : soundPin(pin), 
 }
 
 // Function to turn on the voice
-bool SoundControl::turnOnVoice() {
+bool SoundControl::turnOnVoice(uint16_t trackNumber) {
     digitalWrite(soundPin, HIGH);
     // Check if the sound was turned on successfully
     if (digitalRead(soundPin) == LOW) {   
         Serial.println("Failed to turn on sound.");
         return false;
     }
-    if(playTrack(1)) {
+    if(playTrack(trackNumber)) {
         Serial.println("Sound turned on.");
         return true;
     }
@@ -33,14 +33,7 @@ bool SoundControl::turnOffVoice() {
         return false;
     }
 
-    // Turn off the sound
-    digitalWrite(soundPin, LOW);
-
-    // Check if the sound was turned off successfully
-    if (digitalRead(soundPin) == HIGH) {   
-        Serial.println("Failed to turn off sound.");
-        return false;
-    }
+    delay(200); // Wait for the command to be processed
 
     Serial.println("Sound turned off."); 
     return true; // Return true if the operation succeeded

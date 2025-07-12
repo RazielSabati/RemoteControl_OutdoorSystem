@@ -15,7 +15,7 @@ ActionHandler::ActionHandler()
 
     actionsMatrix[1][0] = [this]() { return lightControl.turnOnLED(); };
     actionsMatrix[1][1] = [this]() { return lightControl.turnOffLED(); };
-    actionsMatrix[1][2] = [this]() { return soundControl.turnOnVoice(); };
+    actionsMatrix[1][2] = [this]() { return soundControl.turnOnVoice(2); };
     actionsMatrix[1][3] = [this]() { return soundControl.turnOffVoice(); };
     actionsMatrix[1][4] = [this]() { return heatControl.turnOnHeat(); };
     actionsMatrix[1][5] = [this]() { return heatControl.turnOffHeat(); };
@@ -35,20 +35,32 @@ bool ActionHandler::executeAction(int menuType, int actionIndex) {
         Serial.println("Executing action."+String(menuType)+String(actionIndex));
 
         return actionsMatrix[menuType][actionIndex](); // Call the function and return the value
-    } else {
+    }
+    else
+    {
         Serial.println("Invalid action.");
         return false; // Return failure
     }
 }
 
-
-
-// Function to execute a test scenario
 bool ActionHandler::executeTestScenario() {
-    // Implement the logic for the test scenario
-    Serial.println("Executing Test scenario");
-    // Add your logic here
-    return true;
+    if (lightControl.turnOnLED() && soundControl.turnOnVoice(1) && heatControl.turnOnHeat()) {
+        if (xTaskCreate(
+                testScenarioTask,     // Task function
+                "TestScenarioTask",   // Task name
+                2048,                 // Stack size
+                this,                  // Parameter to pass to the task
+                1,                    // Task priority
+                nullptr) == pdPASS) {
+            return true;
+        } else {
+            lightControl.turnOffLED();
+            soundControl.turnOffVoice();
+            heatControl.turnOffHeat();
+            return false;
+        }
+    }
+    return false;
 }
 
 // Function to read battery percentage
@@ -62,24 +74,48 @@ bool ActionHandler::readBatteryPercentage() {
 // Function to turn off the system
 bool ActionHandler::turnOffSystem() {
     // Implement the logic to turn off the system
-    Serial.println("System turning off");
-    // Add your logic here
-    return true;
+    if( lightControl.turnOffLED() && soundControl.turnOffVoice() && heatControl.turnOffHeat() )
+            return true;
+
+    return false;
 }
 
-// Function to execute scenario 1
+// Scenario 1 represents a wartime situation designed to draw attention and create the illusion of heightened activity and presence.
 bool ActionHandler::executeScenario1() {
     // Implement the logic for scenario 1
+    // i want to play with the components so i will turn them on and off but not in a sequence like test scenario 
+    
     Serial.println("Executing Scenario 1");
     // Add your logic here
     return true;
 }
 
-// Function to execute scenario 2
+// Scenario 2 represents a peaceful, everyday routine, simulating a calm and relaxed atmosphere
 bool ActionHandler::executeScenario2() {
     // Implement the logic for scenario 2
     Serial.println("Executing Scenario 2");
     // Add your logic here
     return true;
 }
+
+
+// Task function to handle the delay and turn off the components
+void ActionHandler::testScenarioTask(void* param) {
+    ActionHandler* self = static_cast<ActionHandler*>(param);  // Cast the parameter to the class type
+
+    unsigned long startTime = millis();
+
+    while (millis() - startTime < 10000) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+
+    // try to turn off the components 
+    if (self->lightControl.turnOffLED()  && self->heatControl.turnOffHeat() && self->soundControl.turnOffVoice()) {
+        Serial.println("Components turned off successfully.");
+    }
+
+    vTaskDelete(nullptr);
+}
+
+
 

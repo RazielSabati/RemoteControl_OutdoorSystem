@@ -7,7 +7,7 @@
 class SoundControl {
 public:
     SoundControl(int pin, HardwareSerial& mp3Serial);  // Constructor with pin number and UART channel
-    bool turnOnVoice();    // Turn on the voice
+    bool turnOnVoice(uint16_t trackNumber);    // Turn on the voice
     bool turnOffVoice();   // Turn off the voice
 
 private:

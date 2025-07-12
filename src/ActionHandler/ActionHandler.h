@@ -11,11 +11,12 @@ private:
     LightControl lightControl;
     HeatControl heatControl;
     SoundControl soundControl;
-    
     // Define a matrix of actions with functions that return bool
     std::function<bool()> actionsMatrix[2][6]; 
 
 public:
+   
+
     ActionHandler();
     bool executeAction(int menuType, int actionIndex);
     bool executeTestScenario();
@@ -23,6 +24,7 @@ public:
     bool turnOffSystem();
     bool executeScenario1();
     bool executeScenario2();
+    static void testScenarioTask(void* param);
 
 };
 
