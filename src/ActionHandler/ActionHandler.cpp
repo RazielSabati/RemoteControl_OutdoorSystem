@@ -91,13 +91,52 @@ bool ActionHandler::turnOffSystem() {
 
 // Scenario 1 represents a wartime situation designed to draw attention and create the illusion of heightened activity and presence.
 bool ActionHandler::executeScenario1() {
-    // Implement the logic for scenario 1
-    // i want to play with the components so i will turn them on and off but not in a sequence like test scenario 
-    
-    Serial.println("Executing Scenario 1");
-    // Add your logic here
-    return true;
+     if (soundControl.turnOnVoice(3) && lightControl.turnOnLED()) {
+        if (xTaskCreate(
+                scenario1Task,
+                "Scenario1Task",
+                4096,       // קצת יותר מקום בגלל רנדומליות
+                this,
+                1,
+                nullptr) == pdPASS) {
+            return true;
+        } else {
+            soundControl.turnOffVoice();
+            lightControl.turnOffLED();
+            return false;
+        }
+    }
+    return false;
 }
+
+
+void ActionHandler::scenario1Task(void* param) {
+    ActionHandler* self = static_cast<ActionHandler*>(param);
+    unsigned long startTime = millis();
+
+    while (millis() - startTime < 15000) {
+
+        // הבהוב רנדומלי
+        self->lightControl.turnOnLED();
+        int onTime = random(100, 700);  // דלוק בין 100 ל־500ms
+        vTaskDelay(onTime / portTICK_PERIOD_MS);
+
+        self->lightControl.turnOffLED();
+        int offTime = random(100, 700); // כבוי בין 100 ל־500ms
+        vTaskDelay(offTime / portTICK_PERIOD_MS);
+    }
+
+    // ניקוי בסיום
+    self->lightControl.turnOffLED();
+    self->soundControl.turnOffVoice();
+    vTaskDelete(nullptr);
+}
+
+
+
+
+
+
 
 // Scenario 2 represents a peaceful, everyday routine, simulating a calm and relaxed atmosphere
 bool ActionHandler::executeScenario2() {

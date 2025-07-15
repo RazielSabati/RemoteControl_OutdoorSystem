@@ -72,3 +72,34 @@ bool SoundControl::sendCommand(uint8_t *command, size_t len) {
 
     return true; // Return true if all bytes were written
 }
+
+
+bool SoundControl::isVoicePlaying() {
+    // שלח את פקודת השאילתה
+    sendCommand((uint8_t*)CMD_QUERY_STATUS, sizeof(CMD_QUERY_STATUS));
+
+    // המתן לתשובה
+    unsigned long timeout = millis() + 300;
+    while (MP3.available() == 0 && millis() < timeout) {
+        delay(10);
+    }
+
+    if (MP3.available()) {
+        uint8_t response[10];
+        size_t len = MP3.readBytes(response, sizeof(response));
+        for (size_t i = 0; i < len; i++) {
+            // אפשר להדפיס את התשובה לדיבוג
+            Serial.print("0x");
+            Serial.print(response[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println();
+
+        // נבדוק את הבייט המשמעותי בתשובה
+        if (response[3] == 0x42 && response[6] == 0x3D) {
+            return true;  // Playing
+        }
+    }
+
+    return false;  // Not playing
+}

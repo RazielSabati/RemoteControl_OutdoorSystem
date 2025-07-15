@@ -34,6 +34,7 @@ public:
     bool readBatteryPercentage();
     bool turnOffSystem();
     bool executeScenario1();
+    static void scenario1Task(void* param);
     bool executeScenario2();
     static void testScenarioTask(void* param);
     uint8_t getBatteryPercentage(){

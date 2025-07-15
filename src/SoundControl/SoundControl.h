@@ -9,6 +9,8 @@ public:
     SoundControl(int pin, HardwareSerial& mp3Serial);  // Constructor with pin number and UART channel
     bool turnOnVoice(uint16_t trackNumber);    // Turn on the voice
     bool turnOffVoice();   // Turn off the voice
+    bool isVoicePlaying(); // Check if the voice is currently playing
+
 
 private:
     int soundPin;          // Pin number for sound control
@@ -21,6 +23,8 @@ private:
     const uint8_t CMD_PLAY_TRACK[8] = {0x7E, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0xEF}; // Command to play a track
     const uint8_t CMD_SET_VOLUME[8] = {0x7E, 0xFF, 0x06, 0x06, 0x00, 0x00, 0x00, 0xEF}; // Command to set volume
     const uint8_t CMD_STOP[8] = {0x7E, 0xFF, 0x06, 0x16, 0x00, 0x00, 0x00, 0xEF};       // Command to stop playback
+    const uint8_t CMD_QUERY_STATUS[8] = {0x7E, 0xFF, 0x06, 0x42, 0x00, 0x00, 0x00, 0xEF}; // Command to query status
+
 };
 
 #endif
