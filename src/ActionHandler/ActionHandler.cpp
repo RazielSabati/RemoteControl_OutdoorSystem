@@ -1,5 +1,7 @@
 #include "ActionHandler.h"
 #include <Arduino.h>
+float samples[MAX_SAMPLES] = {0};
+
 
 // Constructor
 ActionHandler::ActionHandler() 
@@ -63,13 +65,20 @@ bool ActionHandler::executeTestScenario() {
     return false;
 }
 
-// Function to read battery percentage
+// Function to read and calculate battery percentage
 bool ActionHandler::readBatteryPercentage() {
-    // Implement the logic to read battery percentage
-    Serial.println("Reading battery percentage");
-    // Add your logic here
+    float sum = 0;
+    for (int i = 0; i < MAX_SAMPLES; i++) {
+      sum += samples[i];
+    }
+    filtered_battery_voltage = sum / MAX_SAMPLES;
+
+    // Calculate the battery percentage based on the filtered voltage
+    filtered_battery_percent = (filtered_battery_voltage - 11.0) / (12.6 - 11.0) * 100.0;
+    filtered_battery_percent = constrain(filtered_battery_percent, 0, 100);
     return true;
 }
+
 
 // Function to turn off the system
 bool ActionHandler::turnOffSystem() {
@@ -119,3 +128,13 @@ void ActionHandler::testScenarioTask(void* param) {
 
 
 
+void ActionHandler::readBatteryVoltage() {
+    int raw = analogRead(BATTERY_ADC_PIN);
+    float adc_voltage = (raw / 4095.0) * 3.3;
+    float battery_voltage = adc_voltage * (131.22 / 31.22);  // יחס מחלק המתח
+    sample_index = (sample_index + 1) % MAX_SAMPLES; // Ensure sample_index wraps around
+    if(sample_index == 0) {
+        buffer_filled = true; // Buffer is filled after the first full cycle
+    }   
+    samples[sample_index] = battery_voltage;
+}

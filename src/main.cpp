@@ -1,8 +1,11 @@
 #include "./communication/communication.h"
 #include "./DisplayMenu/DisplayMenu.h"
+#include "./ActionHandler/ActionHandler.h"
 
 ExternalCommunication externalComm;
 DisplayMenu menu;
+ActionHandler actionHandler;
+
 
 void setup() {
     Serial.begin(9600);
@@ -14,10 +17,15 @@ void setup() {
     }
     
     menu.setupScreen();
+    analogReadResolution(12);
 }
 
 void loop() {
     externalComm.receiveMessage(menu);
     
+
+    actionHandler.readBatteryVoltage();
+
     delay(10);// Add a small delay to prevent tight looping
+
 } 

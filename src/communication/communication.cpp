@@ -1,5 +1,6 @@
 #include "communication.h"
 
+
 // Constructor of the ExternalCommunication class
 ExternalCommunication::ExternalCommunication() : actionHandler() {
     memset(iv, 0, sizeof(iv));
@@ -107,7 +108,9 @@ void ExternalCommunication::receiveMessage(DisplayMenu& menu) {
     decrypted[1] = (rollingCode >> 24) & 0xFF; 
     decrypted[2] = (rollingCode >> 16) & 0xFF;     
     decrypted[3] = (rollingCode >> 8) & 0xFF;     
-    decrypted[4] = rollingCode & 0xFF;     
+    decrypted[4] = rollingCode & 0xFF;  
+    decrypted[5] = actionHandler.getBatteryPercentage();
+   
 
     generateRandomIV(); // Generate a random IV for encryption
 
